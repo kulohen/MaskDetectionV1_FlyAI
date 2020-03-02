@@ -115,8 +115,14 @@ my_model = get_net()
 # 判断gpu是否可用
 if torch.cuda.is_available():
     device = 'cuda'
+    print('pytorch use cuda')
 else:
     device = 'cpu'
+    print('pytorch use cpu')
+
+#强制用CPU ，不用时记得删掉
+# device = 'cpu'
+
 device = torch.device(device)
 my_model.to(device)
 
