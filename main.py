@@ -32,8 +32,8 @@ Keras模版项目下载： https://www.flyai.com/python/keras_template.zip
 项目的超参
 '''
 parser = argparse.ArgumentParser()
-parser.add_argument("-e", "--EPOCHS", default=2, type=int, help="train epochs")
-parser.add_argument("-b", "--BATCH", default=1, type=int, help="batch size")
+parser.add_argument("-e", "--EPOCHS", default=5, type=int, help="train epochs")
+parser.add_argument("-b", "--BATCH", default=32, type=int, help="batch size")
 args = parser.parse_args()
 
 '''
@@ -102,7 +102,7 @@ train_dataset = MaskDataset(x_train, y_train)
 valid_dataset = MaskDataset(x_val, y_val)
 #  批大小
 train_batch_size = args.BATCH
-valid_batch_size = 2
+valid_batch_size = 32
 train_data_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
 valid_data_loader = torch.utils.data.DataLoader(
