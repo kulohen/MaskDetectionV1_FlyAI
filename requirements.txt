@@ -3,3 +3,4 @@ numpy
 Pillow==6.2.2
 torch
 torchvision==0.4.0
+torchsummary

@@ -33,7 +33,7 @@ Keras模版项目下载： https://www.flyai.com/python/keras_template.zip
 '''
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--EPOCHS", default=5, type=int, help="train epochs")
-parser.add_argument("-b", "--BATCH", default=32, type=int, help="batch size")
+parser.add_argument("-b", "--BATCH", default=2, type=int, help="batch size")
 args = parser.parse_args()
 
 '''
@@ -70,7 +70,7 @@ class MaskDataset(torch.utils.data.Dataset):
                 xmax = int(float(temp[2]))
                 ymax = int(float(temp[3]))
                 boxes.append([xmin, ymin, xmax, ymax])
-                labels.append(int(temp[4]) + 1)  # （标签是从0开始，0代表没有佩戴口罩, 1代表佩戴口罩）由于默认0为背景类，所以剩下类别+1
+                labels.append(int(temp[4]))  # （标签是从0开始，0代表没有佩戴口罩, 1代表佩戴口罩）由于默认0为背景类，所以剩下类别+1
                 areas.append((xmax - xmin) * (ymax - ymin))
                 iscrowd.append(0)
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
@@ -120,16 +120,13 @@ else:
     device = 'cpu'
     print('pytorch use cpu')
 
-#强制用CPU ，不用时记得删掉
-# device = 'cpu'
-
 device = torch.device(device)
 my_model.to(device)
 
 TORCH_MODEL_NAME = "model.pkl"
-lr = 1e-6
+lr = 1e-4
 params = [p for p in my_model.parameters() if p.requires_grad]
-optimizer = torch.optim.SGD(params, lr=lr, momentum=0.9, weight_decay=0.0005)
+optimizer = torch.optim.SGD(params, lr=lr, momentum=0.9, weight_decay=0.001)
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.2)
 
 '''
@@ -142,6 +139,9 @@ for epoch in range(args.EPOCHS):
     my_model.train()
     batch_step = 0
     epoch_loss = 0
+    '''
+    1.train
+    '''
     for images, targets in train_data_loader:
         batch_step += 1
         images = list(image.to(device) for image in images)
@@ -164,8 +164,20 @@ for epoch in range(args.EPOCHS):
 
     epoch_loss = epoch_loss / len(train_data_loader)
     print('epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
-
+    '''
+    2. val
+    '''
+    my_model.eval()
+    for images_val, targets_val in train_data_loader:
+        pass
+    '''
+    3. 调整学习率
+    '''
     lr_scheduler.step()
+
+    '''
+    4. save best
+    '''
     if epoch_loss < lowest_loss:
         lowest_loss = epoch_loss
         # 保存模型
