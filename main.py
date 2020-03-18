@@ -12,6 +12,7 @@ from model import Model
 from path import MODEL_PATH, DATA_PATH
 import torchvision
 from net import get_net
+from eval import eval_one_batch
 
 if not os.path.exists(MODEL_PATH):
     os.makedirs(MODEL_PATH)
@@ -32,7 +33,7 @@ Keras模版项目下载： https://www.flyai.com/python/keras_template.zip
 项目的超参
 '''
 parser = argparse.ArgumentParser()
-parser.add_argument("-e", "--EPOCHS", default=5, type=int, help="train epochs")
+parser.add_argument("-e", "--EPOCHS", default=3, type=int, help="train epochs")
 parser.add_argument("-b", "--BATCH", default=1, type=int, help="batch size")
 args = parser.parse_args()
 
@@ -159,42 +160,45 @@ for epoch in range(args.EPOCHS):
         epoch_loss += temp_batch_loss
 
         # 改到val去保存best
-        # if temp_batch_loss < lowest_batch_loss:
-        #     lowest_batch_loss = temp_batch_loss
-        #     torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
+        if temp_batch_loss < lowest_batch_loss:
+            lowest_batch_loss = temp_batch_loss
+            torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
 
     epoch_loss = epoch_loss / len(train_data_loader)
     print('train epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
     '''
     2. val
     '''
-    my_model.eval()
 
-    for images_val, targets_val in valid_data_loader:
-        batch_step += 1
-        images_val = list(image.to(device) for image in images_val)
-        targets_val = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
-        loss_dict = my_model(images_val, targets_val)
-        print(loss_dict)
+    eval_one_batch(x_val,y_val)
 
-        # 等等
-        losses = sum(loss for loss in loss_dict.values())
+    # my_model.eval()
 
-        optimizer.zero_grad()
-        losses.backward()
-        optimizer.step()
-
-        temp_batch_loss = losses.cpu().detach().numpy()
-        print('val epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
-        epoch + 1, args.EPOCHS, batch_step, len(valid_data_loader), temp_batch_loss))
-        epoch_loss += temp_batch_loss
-
-        if temp_batch_loss < lowest_batch_loss:
-            lowest_batch_loss = temp_batch_loss
-            torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
-
-    epoch_loss = epoch_loss / len(train_data_loader)
-    print('val epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
+    # for images_val, targets_val in valid_data_loader:
+    #     batch_step += 1
+    #     images_val = list(image.to(device) for image in images_val)
+    #     targets_val = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
+    #     loss_dict = my_model(images_val, targets_val)
+    #     print(loss_dict)
+    #
+    #     # 等等
+    #     losses = sum(loss for loss in loss_dict.values())
+    #
+    #     optimizer.zero_grad()
+    #     losses.backward()
+    #     optimizer.step()
+    #
+    #     temp_batch_loss = losses.cpu().detach().numpy()
+    #     print('val epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
+    #     epoch + 1, args.EPOCHS, batch_step, len(valid_data_loader), temp_batch_loss))
+    #     epoch_loss += temp_batch_loss
+    #
+    #     if temp_batch_loss < lowest_batch_loss:
+    #         lowest_batch_loss = temp_batch_loss
+    #         torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
+    #
+    # epoch_loss = epoch_loss / len(train_data_loader)
+    # print('val epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
     '''
     3. 调整学习率
     '''

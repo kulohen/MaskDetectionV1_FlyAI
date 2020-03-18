@@ -1,12 +1,15 @@
 import json
 import random
 from flyai.dataset import Dataset
-from model import Model
+from model import Model,device,MODEL_PATH,TORCH_MODEL_NAME
 from flyai.processor.download import check_download
 from path import DATA_PATH
 import numpy as np
 import os
 import requests
+from net import get_net
+import torchvision
+import torch
 
 # 根据 recall 和 precision 值来计算 ap
 def voc_ap(rec, prec, use_07_metric=False):
@@ -152,76 +155,156 @@ def get_json(url, is_log=False):
 # data_path = get_json("https://www.flyai.com/get_evaluate_command?data_id=" + data_id)
 # check_download(data_path['command'], DATA_PATH, is_print=False)
 
-dataset = Dataset()
-model = Model(dataset)
-x_test, y_test = dataset.evaluate_data_no_processor("dev.csv")
-randnum = random.randint(0, 100)
-random.seed(randnum)
-random.shuffle(x_test)
-random.seed(randnum)
-random.shuffle(y_test)
+def eval_one_batch(x_test,y_test):
+    # randnum = random.randint(0, 100)
+    # random.seed(randnum)
+    # random.shuffle(x_test)
+    # random.seed(randnum)
+    # random.shuffle(y_test)
 
-# 通过模型得到预测的结果，格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
-preds = model.predict_all(x_test)
+    # 通过模型得到预测的结果，格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
+    preds = model.predict_all(x_test)
 
-# 加载标签 [{'boxes':[], 'labels':[], 'image_id':[]}, ...]
-targets = []
-for i in range(len(y_test)):
-    label_path = y_test[i]['label_path'] # label/019646.jpg.txt
-    boxes = []
-    labels = []
-    image_id = []
-    image_id.append(x_test[i]['image_path'])
-    with open(os.path.join(DATA_PATH, label_path)) as f:
-        for line in f.readlines():
-            # 1954.7443195924375,695.1497671989313,1984.659514688955,738.4779589540301,1933
-            temp = line.strip().split(',')
-            xmin = int(float(temp[0]))
-            ymin = int(float(temp[1]))
-            xmax = int(float(temp[2]))
-            ymax = int(float(temp[3]))
-            boxes.append([xmin, ymin, xmax, ymax])
-            labels.append(int(temp[4]))
-    target = {}
-    target["boxes"] = boxes
-    target["labels"] = labels
-    target["image_id"] = image_id
-    targets.append(target)
+    # 加载标签 [{'boxes':[], 'labels':[], 'image_id':[]}, ...]
+    targets = []
+    for i in range(len(y_test)):
+        label_path = y_test[i]['label_path']  # label/019646.jpg.txt
+        boxes = []
+        labels = []
+        image_id = []
+        image_id.append(x_test[i]['image_path'])
+        with open(os.path.join(DATA_PATH, label_path)) as f:
+            for line in f.readlines():
+                # 1954.7443195924375,695.1497671989313,1984.659514688955,738.4779589540301,1933
+                temp = line.strip().split(',')
+                xmin = int(float(temp[0]))
+                ymin = int(float(temp[1]))
+                xmax = int(float(temp[2]))
+                ymax = int(float(temp[3]))
+                boxes.append([xmin, ymin, xmax, ymax])
+                labels.append(int(temp[4]))
+        target = {}
+        target["boxes"] = boxes
+        target["labels"] = labels
+        target["image_id"] = image_id
+        targets.append(target)
 
-'''
-if不需要修改
-'''
-if len(y_test) != len(x_test):
-    result = dict()
-    result['score'] = 0
-    result['label'] = "评估违规"
-    result['info'] = ""
-    print(json.dumps(result))
-else:
     '''
-    在下面实现不同的评估算法
+    if不需要修改
     '''
-    # 开始计算最后得分
-    sum_ap = 0
-    all_labels = [i for i in range(2)] # 所有目标类别
+    if len(y_test) != len(x_test):
+        result = dict()
+        result['score'] = 0
+        result['label'] = "评估违规"
+        result['info'] = ""
+        print(json.dumps(result))
+    else:
+        '''
+        在下面实现不同的评估算法
+        '''
+        # 开始计算最后得分
+        sum_ap = 0
+        all_labels = [i for i in range(2)]  # 所有目标类别
 
-    # 以下是我自己加的
+        # 以下是我自己加的
+
+        for label in all_labels:  # 逐个类别计算ap
+            prediction1 = []  # 在计算 ap 的时候，需要把prediction按照最后预测的类别进行筛选
+            for pred in preds:
+                if pred[3] == label:
+                    prediction1.append([pred[0], pred[1], pred[2][0], pred[2][1], pred[2][2], pred[2][3]])
+            if len(prediction1) != 0:  # 当包含预测框的时候，进行计算ap值
+                rec, prec, ap = voc_eval(targets, prediction1, label)
+            else:
+                ap = 0
+            sum_ap += ap
+        map = sum_ap / len(all_labels)
+
+        result = dict()
+        result['score'] = round(map * 100, 2)
+        result['label'] = "The Score is MAP."
+        result['info'] = ""
+        print(json.dumps(result))
+
+    return result
+
+if __name__=="__main__":
+
+    dataset = Dataset()
+    model = Model(dataset)
+    try:
+        x_test, y_test = dataset.evaluate_data_no_processor("test.csv")
+        print('eval.py use test.csv')
+    except:
+        x_test, y_test = dataset.evaluate_data_no_processor("dev.csv")
+        print('eval.py use dev.csv')
+    randnum = random.randint(0, 100)
+    random.seed(randnum)
+    random.shuffle(x_test)
+    random.seed(randnum)
+    random.shuffle(y_test)
+
+    # 通过模型得到预测的结果，格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
+    preds = model.predict_all(x_test)
+
+    # 加载标签 [{'boxes':[], 'labels':[], 'image_id':[]}, ...]
+    targets = []
+    for i in range(len(y_test)):
+        label_path = y_test[i]['label_path'] # label/019646.jpg.txt
+        boxes = []
+        labels = []
+        image_id = []
+        image_id.append(x_test[i]['image_path'])
+        with open(os.path.join(DATA_PATH, label_path)) as f:
+            for line in f.readlines():
+                # 1954.7443195924375,695.1497671989313,1984.659514688955,738.4779589540301,1933
+                temp = line.strip().split(',')
+                xmin = int(float(temp[0]))
+                ymin = int(float(temp[1]))
+                xmax = int(float(temp[2]))
+                ymax = int(float(temp[3]))
+                boxes.append([xmin, ymin, xmax, ymax])
+                labels.append(int(temp[4]))
+        target = {}
+        target["boxes"] = boxes
+        target["labels"] = labels
+        target["image_id"] = image_id
+        targets.append(target)
+
+    '''
+    if不需要修改
+    '''
+    if len(y_test) != len(x_test):
+        result = dict()
+        result['score'] = 0
+        result['label'] = "评估违规"
+        result['info'] = ""
+        print(json.dumps(result))
+    else:
+        '''
+        在下面实现不同的评估算法
+        '''
+        # 开始计算最后得分
+        sum_ap = 0
+        all_labels = [i for i in range(2)] # 所有目标类别
+
+        # 以下是我自己加的
 
 
-    for label in all_labels: # 逐个类别计算ap
-        prediction1 = []    # 在计算 ap 的时候，需要把prediction按照最后预测的类别进行筛选
-        for pred in preds:
-            if pred[3] == label:
-                prediction1.append([pred[0], pred[1], pred[2][0], pred[2][1], pred[2][2], pred[2][3]])
-        if len(prediction1) != 0: # 当包含预测框的时候，进行计算ap值
-            rec, prec, ap = voc_eval(targets, prediction1, label)
-        else:
-            ap = 0
-        sum_ap += ap
-    map = sum_ap / len(all_labels)
+        for label in all_labels: # 逐个类别计算ap
+            prediction1 = []    # 在计算 ap 的时候，需要把prediction按照最后预测的类别进行筛选
+            for pred in preds:
+                if pred[3] == label:
+                    prediction1.append([pred[0], pred[1], pred[2][0], pred[2][1], pred[2][2], pred[2][3]])
+            if len(prediction1) != 0: # 当包含预测框的时候，进行计算ap值
+                rec, prec, ap = voc_eval(targets, prediction1, label)
+            else:
+                ap = 0
+            sum_ap += ap
+        map = sum_ap / len(all_labels)
 
-    result = dict()
-    result['score'] = round(map * 100, 2)
-    result['label'] = "The Score is MAP."
-    result['info'] = ""
-    print(json.dumps(result))
+        result = dict()
+        result['score'] = round(map * 100, 2)
+        result['label'] = "The Score is MAP."
+        result['info'] = ""
+        print(json.dumps(result))
