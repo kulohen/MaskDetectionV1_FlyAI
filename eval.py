@@ -155,7 +155,9 @@ def get_json(url, is_log=False):
 # data_path = get_json("https://www.flyai.com/get_evaluate_command?data_id=" + data_id)
 # check_download(data_path['command'], DATA_PATH, is_print=False)
 
-def eval_one_batch(x_test,y_test, model ):
+# def eval_one_batch(x_test,y_test, model ):
+def eval_one_batch(preds):
+
     # randnum = random.randint(0, 100)
     # random.seed(randnum)
     # random.shuffle(x_test)
@@ -163,7 +165,7 @@ def eval_one_batch(x_test,y_test, model ):
     # random.shuffle(y_test)
 
     # 通过模型得到预测的结果，格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
-    preds = model.predict_all(x_test)
+    # preds = model.predict_all(x_test)
 
     # 加载标签 [{'boxes':[], 'labels':[], 'image_id':[]}, ...]
     targets = []

@@ -36,4 +36,4 @@ if __name__=='__main__':
 
     my_model.to(device)
     # print(my_model)
-    summary(my_model)
+    summary(my_model , input_size=(224,224,3))

@@ -24,7 +24,10 @@ class Model(Base):
             param.requires_grad = False
         my_model.eval()
         labels = []
+        step= 0
         for data in datas:
+            # print('predict step : ', step)
+            step += 1
             x_data = self.data.predict_data(**data)
             img = cv2.imread(os.path.join(DATA_PATH, x_data[0]))
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
