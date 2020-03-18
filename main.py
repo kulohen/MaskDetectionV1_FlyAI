@@ -170,7 +170,7 @@ for epoch in range(args.EPOCHS):
     2. val
     '''
 
-    eval_one_batch(x_val,y_val)
+    eval_one_batch(x_val,y_val,model)
 
     # my_model.eval()
 
