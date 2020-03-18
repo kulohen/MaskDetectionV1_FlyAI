@@ -1,8 +1,8 @@
 import json
 import random
 from flyai.dataset import Dataset
-# from model import Model
-# from flyai.processor.download import check_download
+from model import Model
+from flyai.processor.download import check_download
 from path import DATA_PATH
 import numpy as np
 import os
@@ -153,7 +153,7 @@ def get_json(url, is_log=False):
 # check_download(data_path['command'], DATA_PATH, is_print=False)
 
 dataset = Dataset()
-# model = Model(dataset)
+model = Model(dataset)
 x_test, y_test = dataset.evaluate_data_no_processor("dev.csv")
 randnum = random.randint(0, 100)
 random.seed(randnum)
@@ -162,7 +162,7 @@ random.seed(randnum)
 random.shuffle(y_test)
 
 # 通过模型得到预测的结果，格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
-# preds = model.predict_all(x_test)
+preds = model.predict_all(x_test)
 
 # 加载标签 [{'boxes':[], 'labels':[], 'image_id':[]}, ...]
 targets = []
@@ -204,6 +204,10 @@ else:
     # 开始计算最后得分
     sum_ap = 0
     all_labels = [i for i in range(2)] # 所有目标类别
+
+    # 以下是我自己加的
+
+
     for label in all_labels: # 逐个类别计算ap
         prediction1 = []    # 在计算 ap 的时候，需要把prediction按照最后预测的类别进行筛选
         for pred in preds:

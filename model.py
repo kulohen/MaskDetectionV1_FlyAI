@@ -32,6 +32,8 @@ class Model(Base):
             pred = my_model([img.to(device)])[0]
             for (k, v) in pred.items():
                 pred[k] = v.cpu().numpy()
+
+            print('labels len is ',len(pred['labels']))
             for j in range(len(pred['labels'])):
                 labels.append([x_data[0], pred['scores'][j], pred['boxes'][j], pred['labels'][j]-1]) # 这里pred['labels'][j]-1 用于与标签对应 0-没有佩戴，1-有佩戴
         ''' 关于返回的说明： 

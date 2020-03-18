@@ -12,8 +12,8 @@ weights_path = remote_helper.get_remote_date('https://www.flyai.com/m/fasterrcnn
 
 # 构建模型
 def get_net():
-    # num_classes = 2 + 1  # (2个类别) + background
-    num_classes = 2 # (2个类别)
+    num_classes = 2 + 1  # (2个类别) + background
+    # num_classes = 2 # (2个类别)
     # 加载经过预训练的模型
     # my_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
     # my_model = torchvision.models.resnet50(pretrained=True)
