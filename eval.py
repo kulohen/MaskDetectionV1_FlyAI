@@ -76,6 +76,7 @@ def voc_eval(groundtruth, prediction, classname, ovthresh=0.5, use_07_metric=Fal
 
     # load prection
     image_ids = [x[0] for x in prediction]
+    # print('image_ids', image_ids)
     confidence = np.array([float(x[1]) for x in prediction])
     BB = np.array([[float(z) for z in x[2:]] for x in prediction])
 
@@ -84,7 +85,7 @@ def voc_eval(groundtruth, prediction, classname, ovthresh=0.5, use_07_metric=Fal
     sorted_scores = np.sort(-confidence)
     BB = BB[sorted_ind, :]
     image_ids = [image_ids[x] for x in sorted_ind]
-
+    # print('image_ids',image_ids)
     # go down dets and mark TPs and FPs
     nd = len(image_ids)
     tp = np.zeros(nd)
