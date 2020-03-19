@@ -147,23 +147,23 @@ for epoch in range(args.EPOCHS):
     '''
     1.train
     '''
-    for images, targets in train_data_loader:
-        batch_step += 1
-        # print(images) # tensor的图片数字整列
-        # print(targets) # MaskDataset里的target ， 有boxes,labels,image_id,area,iscrowd
-        images = list(image.to(device) for image in images)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-        loss_dict = my_model(images, targets)
-        losses = sum(loss for loss in loss_dict.values())
-
-        optimizer.zero_grad()
-        losses.backward()
-        optimizer.step()
-
-        temp_batch_loss = losses.cpu().detach().numpy()
-        print('train epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
-        epoch + 1, args.EPOCHS, batch_step, len(train_data_loader), temp_batch_loss))
-        epoch_loss += temp_batch_loss
+    # for images, targets in train_data_loader:
+    #     batch_step += 1
+    #     # print(images) # tensor的图片数字整列
+    #     # print(targets) # MaskDataset里的target ， 有boxes,labels,image_id,area,iscrowd
+    #     images = list(image.to(device) for image in images)
+    #     targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+    #     loss_dict = my_model(images, targets)
+    #     losses = sum(loss for loss in loss_dict.values())
+    #
+    #     optimizer.zero_grad()
+    #     losses.backward()
+    #     optimizer.step()
+    #
+    #     temp_batch_loss = losses.cpu().detach().numpy()
+    #     print('train epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
+    #     epoch + 1, args.EPOCHS, batch_step, len(train_data_loader), temp_batch_loss))
+    #     epoch_loss += temp_batch_loss
     #
     #     # 改到val去保存best
     #     # if temp_batch_loss < lowest_batch_loss:
@@ -171,8 +171,8 @@ for epoch in range(args.EPOCHS):
     #     #     print('save best by loss: %.4f'%temp_batch_loss)
     #     #     torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
     #
-    epoch_loss = epoch_loss / len(train_data_loader)
-    print('train epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
+    # epoch_loss = epoch_loss / len(train_data_loader)
+    # print('train epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
     '''
     2. val
     '''
@@ -184,11 +184,19 @@ for epoch in range(args.EPOCHS):
         images_val_2 = list(images_val.to(device) for images_val in images_val)
         targets_val_2 = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
         targets_val_3 = [{k: v.tolist() for k, v in t.items()} for t in targets_val]
-
+        # for target_tmp in targets_val_2:
+        #     targets_val_3.append(target_tmp.cpu().numpy())
+        # print('images_val',images_val)
+        # print('targets_val',targets_val)
+        # print('images_val_2',images_val_2)
+        # print('targets_val_2',targets_val_2)
+        # print('targets_val_3',targets_val_3)
         val_dict = my_model(images_val_2, targets_val_2)
+        # val_dict_2 =
+        # print(val_dict)
 
         # 1、把loss_dict 转化为predict_all（）return的结果的格式 √
-        # 2、调用eval_one_batch √
+        # 2、调用eval_one_batch
         # 3、打印评估结果和save best map
 
 
@@ -210,7 +218,10 @@ for epoch in range(args.EPOCHS):
         all_labels = [i for i in range(2)]  # 所有目标类别
 
         for label in all_labels:  # 逐个类别计算ap
-
+            # prediction1 = []  # 在计算 ap 的时候，需要把prediction按照最后预测的类别进行筛选
+            # for pred in eval_labels:
+            #     if pred[3] == label:
+            #         prediction1.append([pred[0], pred[1], pred[2][0], pred[2][1], pred[2][2], pred[2][3]])
             if len(val_dict) != 0:  # 当包含预测框的时候，进行计算ap值
                 rec, prec, ap = voc_eval(targets_val_3, preds, label)
             else:
@@ -224,6 +235,21 @@ for epoch in range(args.EPOCHS):
         result['info'] = ""
         print(json.dumps(result))
 
+        # 等等
+        # losses = sum(loss for loss in loss_dict.values())
+        #
+        # optimizer.zero_grad()
+        # losses.backward()
+        # optimizer.step()
+        #
+        # temp_batch_loss = losses.cpu().detach().numpy()
+        # print('val epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
+        # epoch + 1, args.EPOCHS, batch_step, len(valid_data_loader), temp_batch_loss))
+        # epoch_loss += temp_batch_loss
+
+        # if temp_batch_loss < lowest_batch_loss:
+        #     lowest_batch_loss = temp_batch_loss
+        #     torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
 
     epoch_loss = epoch_loss / len(train_data_loader)
     print('val epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
