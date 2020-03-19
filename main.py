@@ -99,7 +99,7 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-def val_part(my_model,images_val,targets_val):
+def val_part(my_model,images_val,targets_val,this_dataset):
     my_model.eval()
 
     images_val_2 = list(images_val.to(device) for images_val in images_val)
@@ -110,7 +110,7 @@ def val_part(my_model,images_val,targets_val):
         # print(train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path'])
         # print(targets_val_3[i]['image_id'])
         # targets_val_3[i]['image_id'] = train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path']
-        targets_val_3[i].update({'image_id': [train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path']]})
+        targets_val_3[i].update({'image_id': [this_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path']]})
         # print(targets_val_3[i]['image_id'])
 
     val_dict = my_model(images_val_2, targets_val_2)
@@ -199,6 +199,7 @@ dataset.get_step() 获取数据的总迭代次数
 
 lowest_loss = 100
 lowest_batch_loss = 100
+highest_score_map = 0
 for epoch in range(args.EPOCHS):
     time_1 = clock()
     batch_step = 0
@@ -224,8 +225,10 @@ for epoch in range(args.EPOCHS):
         print('train epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
         epoch + 1, args.EPOCHS, batch_step, len(train_data_loader), temp_batch_loss))
         epoch_loss += temp_batch_loss
-
-        val_part(my_model, images, targets)
+        '''
+        2. val
+        '''
+        train_score = val_part(my_model, images, targets,train_dataset)
         try:
             images_val, targets_val = dataiter.next()
         except StopIteration:
@@ -235,24 +238,18 @@ for epoch in range(args.EPOCHS):
 
         # print('images_val', images_val)
         # print('targets_val', targets_val)
-        val_part(my_model, images_val, targets_val)
-    #
-    #     # 改到val去保存best
-    #     # if temp_batch_loss < lowest_batch_loss:
-    #     #     lowest_batch_loss = temp_batch_loss
-    #     #     print('save best by loss: %.4f'%temp_batch_loss)
-    #     #     torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
-    #
+        val_score = val_part(my_model, images_val, targets_val,valid_dataset)
+
+        # 改到val去保存best
+        if highest_score_map < val_score:
+            highest_score_map = val_score
+            print('save best by map: %.4f'%highest_score_map)
+            torch.save(my_model.state_dict(), os.path.join(MODEL_PATH, TORCH_MODEL_NAME))
+
     epoch_loss = epoch_loss / len(train_data_loader)
     print('train epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
-    '''
-    2. val
-    '''
-    # val_part(my_model, images_val, targets_val)
 
 
-    epoch_loss = epoch_loss / len(train_data_loader)
-    print('val epoch: %d, loss: %f' % (epoch + 1, epoch_loss))
     '''
     3. 调整学习率
     '''
