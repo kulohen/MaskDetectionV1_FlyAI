@@ -190,7 +190,7 @@ for epoch in range(args.EPOCHS):
         # print('targets_val',targets_val)
         # print('images_val_2',images_val_2)
         # print('targets_val_2',targets_val_2)
-        # print('targets_val_3',targets_val_3)
+        print('targets_val_3',targets_val_3)
         val_dict = my_model(images_val_2, targets_val_2)
         # val_dict_2 =
         # print(val_dict)

@@ -47,14 +47,17 @@ def voc_ap(rec, prec, use_07_metric=False):
 
 def voc_eval(groundtruth, prediction, classname, ovthresh=0.5, use_07_metric=False):
     '''
-    :param groundtruth: 格式为：[{'boxes':[], 'labels':[], 'image_id':[]}, ...]
-    :param prediction: 格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]
+    :param groundtruth: 格式为：[{'boxes':[], 'labels':[], 'image_id':[]}, ...] 是指图片的path
+    :param prediction: 格式为：[[<image id> <confidence> <left> <top> <right> <bottom>], ...]  是指图片的id
     :param classname: 计算的是当前类别的 ap
     :param ovthresh: iou的阈值
     :param use_07_metric: 标准选择，是否是之前的标准
     :return:
     '''
+    # print('groundtruth',groundtruth)
     imagenames = [i['image_id'][0] for i in groundtruth]
+    # print('imagenames len is', len(imagenames))
+    # print('imagename[0]', imagenames[0])
     # extract gt objects for this class
     class_recs = {}
     npos = 0
@@ -91,6 +94,7 @@ def voc_eval(groundtruth, prediction, classname, ovthresh=0.5, use_07_metric=Fal
     tp = np.zeros(nd)
     fp = np.zeros(nd)
     for d in range(nd):
+        # print('image_ids[d]',image_ids[d])
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
         ovmax = -np.inf

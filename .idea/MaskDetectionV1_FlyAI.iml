@@ -10,7 +10,7 @@
   </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="jdk" jdkName="Python 3.6 (RecIndoorScenes2009_FlyAI)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.6 (PornImageRecognition_FlyAI)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Google App Engine SDK" level="project" />
   </component>

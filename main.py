@@ -37,7 +37,7 @@ Keras模版项目下载： https://www.flyai.com/python/keras_template.zip
 '''
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--EPOCHS", default=3, type=int, help="train epochs")
-parser.add_argument("-b", "--BATCH", default=1, type=int, help="batch size")
+parser.add_argument("-b", "--BATCH", default=2, type=int, help="batch size")
 args = parser.parse_args()
 
 '''
@@ -105,6 +105,13 @@ def val_part(my_model,images_val,targets_val):
     images_val_2 = list(images_val.to(device) for images_val in images_val)
     targets_val_2 = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
     targets_val_3 = [{k: v.tolist() for k, v in t.items()} for t in targets_val]
+    # targets_val_3 = [{k: v.tolist() for k, v in t['image_id']} for t in targets_val_3]
+    for i in range(len(targets_val_3)):
+        # print(train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path'])
+        # print(targets_val_3[i]['image_id'])
+        # targets_val_3[i]['image_id'] = train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path']
+        targets_val_3[i].update({'image_id': [train_dataset.img_path_list[targets_val_3[i]['image_id'][0]]['image_path']]})
+        # print(targets_val_3[i]['image_id'])
 
     val_dict = my_model(images_val_2, targets_val_2)
 
@@ -115,7 +122,9 @@ def val_part(my_model,images_val,targets_val):
     preds = []
     for i in range(len(val_dict)):
         for j in range(len(val_dict[i]['scores'])):
-            preds.append([targets_val_2[i]['image_id'].item(),
+            preds.append([
+                            targets_val_3[i]['image_id'][0],
+                # x_train[0]['image_path'],
                           val_dict[i]['scores'][j],
                           val_dict[i]['boxes'][j][0].cpu().detach().item(),
                           val_dict[i]['boxes'][j][1].cpu().detach().item(),
@@ -224,6 +233,8 @@ for epoch in range(args.EPOCHS):
             dataiter = iter(valid_data_loader)
             images_val, targets_val = dataiter.next()
 
+        # print('images_val', images_val)
+        # print('targets_val', targets_val)
         val_part(my_model, images_val, targets_val)
     #
     #     # 改到val去保存best
