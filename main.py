@@ -37,7 +37,7 @@ Keras模版项目下载： https://www.flyai.com/python/keras_template.zip
 '''
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--EPOCHS", default=3, type=int, help="train epochs")
-parser.add_argument("-b", "--BATCH", default=2, type=int, help="batch size")
+parser.add_argument("-b", "--BATCH", default=1, type=int, help="batch size")
 args = parser.parse_args()
 
 '''
@@ -99,11 +99,60 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
+def val_part(my_model,images_val,targets_val):
+    my_model.eval()
+
+    images_val_2 = list(images_val.to(device) for images_val in images_val)
+    targets_val_2 = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
+    targets_val_3 = [{k: v.tolist() for k, v in t.items()} for t in targets_val]
+
+    val_dict = my_model(images_val_2, targets_val_2)
+
+    # 1、把loss_dict 转化为predict_all（）return的结果的格式 √
+    # 2、调用eval_one_batch √
+    # 3、打印评估结果和save best map
+
+    preds = []
+    for i in range(len(val_dict)):
+        for j in range(len(val_dict[i]['scores'])):
+            preds.append([targets_val_2[i]['image_id'].item(),
+                          val_dict[i]['scores'][j],
+                          val_dict[i]['boxes'][j][0].cpu().detach().item(),
+                          val_dict[i]['boxes'][j][1].cpu().detach().item(),
+                          val_dict[i]['boxes'][j][2].cpu().detach().item(),
+                          val_dict[i]['boxes'][j][3].cpu().detach().item(),
+                          ])  # 这里pred['labels'][j]-1 用于与标签对应 0-没有佩戴，1-有佩戴
+
+    # eval_one_batch(eval_labels)
+
+    # 开始计算最后得分
+    sum_ap = 0
+    all_labels = [i for i in range(2)]  # 所有目标类别
+
+    for label in all_labels:  # 逐个类别计算ap
+
+        if len(val_dict) != 0:  # 当包含预测框的时候，进行计算ap值
+            rec, prec, ap = voc_eval(targets_val_3, preds, label)
+        else:
+            ap = 0
+        sum_ap += ap
+    map = sum_ap / len(all_labels)
+
+    # result = dict()
+    # result['score'] = round(map * 100, 2)
+    # result['label'] = "The Score is MAP."
+    # result['info'] = ""
+    # print(json.dumps(result))
+    print('map is %.2f' % map)
+    return map
+
+
 # 获取所有原始数据
 x_train, y_train, x_val, y_val = dataset.get_all_data()  # 示例： [{'img_path': 'img/019646.jpg'}, ...] [{'label_path': 'label/019646.jpg.txt'}, ...]
 # 构建自己的数据加载器
 train_dataset = MaskDataset(x_train, y_train)
 valid_dataset = MaskDataset(x_val, y_val)
+
 #  批大小
 train_batch_size = args.BATCH
 valid_batch_size = args.BATCH
@@ -111,6 +160,8 @@ train_data_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
 valid_data_loader = torch.utils.data.DataLoader(
     valid_dataset, batch_size=valid_batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
+
+dataiter = iter(valid_data_loader)
 
 '''
 实现自己的网络机构
@@ -141,13 +192,13 @@ lowest_loss = 100
 lowest_batch_loss = 100
 for epoch in range(args.EPOCHS):
     time_1 = clock()
-    my_model.train()
     batch_step = 0
     epoch_loss = 0
     '''
     1.train
     '''
     for images, targets in train_data_loader:
+        my_model.train()
         batch_step += 1
         # print(images) # tensor的图片数字整列
         # print(targets) # MaskDataset里的target ， 有boxes,labels,image_id,area,iscrowd
@@ -164,6 +215,16 @@ for epoch in range(args.EPOCHS):
         print('train epoch: %d/%d, batch: %d/%d, batch_loss: %f' % (
         epoch + 1, args.EPOCHS, batch_step, len(train_data_loader), temp_batch_loss))
         epoch_loss += temp_batch_loss
+
+        val_part(my_model, images, targets)
+        try:
+            images_val, targets_val = dataiter.next()
+        except StopIteration:
+            print('valid_data_loader 遍历完毕，从头再来')
+            dataiter = iter(valid_data_loader)
+            images_val, targets_val = dataiter.next()
+
+        val_part(my_model, images_val, targets_val)
     #
     #     # 改到val去保存best
     #     # if temp_batch_loss < lowest_batch_loss:
@@ -176,53 +237,7 @@ for epoch in range(args.EPOCHS):
     '''
     2. val
     '''
-
-    my_model.eval()
-
-    for images_val, targets_val in valid_data_loader:
-        batch_step += 1
-        images_val_2 = list(images_val.to(device) for images_val in images_val)
-        targets_val_2 = [{k: v.to(device) for k, v in t.items()} for t in targets_val]
-        targets_val_3 = [{k: v.tolist() for k, v in t.items()} for t in targets_val]
-
-        val_dict = my_model(images_val_2, targets_val_2)
-
-        # 1、把loss_dict 转化为predict_all（）return的结果的格式 √
-        # 2、调用eval_one_batch √
-        # 3、打印评估结果和save best map
-
-
-        preds = []
-        for i in range(len(val_dict)):
-            for j in range(len(val_dict[i]['scores'])):
-                preds.append([ targets_val_2[i]['image_id'].item() ,
-                                        val_dict[i]['scores'][j],
-                                        val_dict[i]['boxes'][j][0].cpu().detach().item(),
-                                        val_dict[i]['boxes'][j][1].cpu().detach().item(),
-                                        val_dict[i]['boxes'][j][2].cpu().detach().item(),
-                                        val_dict[i]['boxes'][j][3].cpu().detach().item(),
-                                     ]) # 这里pred['labels'][j]-1 用于与标签对应 0-没有佩戴，1-有佩戴
-
-        # eval_one_batch(eval_labels)
-
-        # 开始计算最后得分
-        sum_ap = 0
-        all_labels = [i for i in range(2)]  # 所有目标类别
-
-        for label in all_labels:  # 逐个类别计算ap
-
-            if len(val_dict) != 0:  # 当包含预测框的时候，进行计算ap值
-                rec, prec, ap = voc_eval(targets_val_3, preds, label)
-            else:
-                ap = 0
-            sum_ap += ap
-        map = sum_ap / len(all_labels)
-
-        result = dict()
-        result['score'] = round(map * 100, 2)
-        result['label'] = "The Score is MAP."
-        result['info'] = ""
-        print(json.dumps(result))
+    # val_part(my_model, images_val, targets_val)
 
 
     epoch_loss = epoch_loss / len(train_data_loader)
