@@ -9,6 +9,7 @@ import cv2
 import torchvision
 
 TORCH_MODEL_NAME = "model.pkl"
+TEMP_TORCH_MODEL_NAME = "temp_model.pkl"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Model(Base):

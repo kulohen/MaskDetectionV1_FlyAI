@@ -217,7 +217,6 @@ for epoch in range(args.EPOCHS):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         loss_dict = my_model(images, targets)
-
         losses = sum(loss for loss in loss_dict.values())
 
         optimizer.zero_grad()
