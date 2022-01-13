@@ -1,6 +1,6 @@
 flyai
 numpy
-Pillow==6.2.2
+Pillow==9.0.0
 torch
 torchvision
 torchsummary
